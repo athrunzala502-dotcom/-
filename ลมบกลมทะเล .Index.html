@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สื่อการสอน 3D Interactive: ลมบกลมทะเล และลมมรสุม (ป.6)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #0b1329;
+            color: #f1f5f9;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism Styles */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Glowing Effects */
+        .glow-sky {
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.35);
+        }
+        .glow-amber {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.35);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.4);
+            border-radius: 3px;
+        }
+
+        /* Canvas Overlay Container */
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+
+        /* Range Slider Styling */
+        input[type=range] {
+            height: 6px;
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 5px;
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #38bdf8;
+            cursor: pointer;
+            box-shadow: 0 0 10px #38bdf8;
+            transition: all 0.2s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between relative selection:bg-sky-500 selection:text-white">
+
+    <!-- Top Header Navigation Bar -->
+    <header class="relative z-20 glass-panel border-b border-slate-700/50 sticky top-0">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+            <!-- Brand Title & Tag -->
+            <div class="flex items-center gap-3">
+                <div class="p-2.5 bg-gradient-to-tr from-sky-600 to-indigo-600 rounded-2xl glow-sky text-white">
+                    <i class="fa-solid fa-wind text-2xl animate-pulse"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-sky-500/20 text-sky-400 border border-sky-500/30 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                            วิทยาศาสตร์ ป.6
+                        </span>
+                        <span class="text-xs text-slate-400"><i class="fa-solid fa-bullseye text-amber-400 mr-1"></i>ทดลอง • สังเกต • วิเคราะห์</span>
+                    </div>
+                    <h1 class="text-lg md:text-xl font-bold text-white tracking-wide mt-0.5">
+                        ปรากฏการณ์บนโลก: ลมบกลมทะเล และลมมรสุม (3D Interactive)
+                    </h1>
+                </div>
+            </div>
+
+            <!-- Main Navigation Mode Switches -->
+            <nav class="flex bg-slate-900/80 p-1 rounded-2xl border border-slate-700/60 shadow-inner w-full md:w-auto justify-center">
+                <button onclick="setModule(1)" id="btn-mod-1" class="px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md">
+                    <i class="fa-solid fa-sun-cloud"></i> ลมบกลมทะเล
+                </button>
+                <button onclick="setModule(2)" id="btn-mod-2" class="px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-globe-asia"></i> ลมมรสุมภูมิภาค
+                </button>
+                <button onclick="openQuiz()" id="btn-mod-quiz" class="px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-clipboard-question text-emerald-400"></i> แบบทดสอบ 3D
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="relative flex-grow flex flex-col justify-between z-10 min-h-[calc(100vh-80px)]">
+
+        <!-- 3D Canvas Viewport (Background Layer) -->
+        <div id="canvas-container"></div>
+
+        <!-- Floating Camera & View Controls HUD -->
+        <div class="absolute top-4 right-4 z-20 flex flex-col gap-2">
+            <button onclick="resetCamera()" title="รีเซ็ตมุมกล้อง" class="p-3 bg-slate-900/80 hover:bg-slate-800 text-sky-400 rounded-xl glass-card transition border border-slate-700/50 shadow-lg text-sm">
+                <i class="fa-solid fa-arrows-to-dot text-lg"></i>
+            </button>
+            <button onclick="toggleAutoRotate()" id="btn-auto-rotate" title="หมุนกล้องอัตโนมัติ" class="p-3 bg-slate-900/80 hover:bg-slate-800 text-slate-400 rounded-xl glass-card transition border border-slate-700/50 shadow-lg text-sm">
+                <i class="fa-solid fa-rotate text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Educational HUD Overlay Cards (Top Left) -->
+        <div class="p-4 pointer-events-none z-20 max-w-sm space-y-3">
+            <div class="glass-panel p-4 rounded-2xl pointer-events-auto border-l-4 border-l-sky-400 shadow-2xl">
+                <div class="flex justify-between items-center mb-1">
+                    <span id="hud-status-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        กำลังสังเกตการณ์
+                    </span>
+                    <span class="text-xs text-slate-400"><i class="fa-solid fa-hand-pointer mr-1"></i>คลิกลาก 3D หมุนได้ 360°</span>
+                </div>
+                <h3 id="hud-title" class="text-lg font-bold text-white flex items-center gap-2">
+                    ลมทะเล (Sea Breeze)
+                </h3>
+                <p id="hud-desc" class="text-xs text-slate-300 leading-relaxed mt-1">
+                    เกิดในเวลากลางวัน พื้นดินร้อนเร็วกว่าพื้นน้ำ อากาศเหนือพื้นดินจึงลอยตัวสูงขึ้น อากาศเย็นกว่าจากทะเลจึงพัดเข้ามาแทนที่
+                </p>
+            </div>
+
+            <!-- Live HUD Statistics Indicators -->
+            <div class="grid grid-cols-2 gap-2 pointer-events-auto">
+                <div class="glass-card p-3 rounded-xl border border-slate-700/50">
+                    <div class="text-xs text-slate-400">ความต่างความกดอากาศ (ΔP)</div>
+                    <div id="hud-dp" class="text-lg font-bold text-sky-400 mt-0.5">1.2 hPa</div>
+                </div>
+                <div class="glass-card p-3 rounded-xl border border-slate-700/50">
+                    <div class="text-xs text-slate-400">ความเร็วลม (Wind Speed)</div>
+                    <div id="hud-wind-speed" class="text-lg font-bold text-emerald-400 mt-0.5">18.5 km/h</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Interactive Dashboard Drawer -->
+        <div id="bottom-controls" class="p-4 z-20 max-w-7xl mx-auto w-full">
+            
+            <!-- MODULE 1 CONTROLS: Land & Sea Breeze -->
+            <div id="mod1-controls" class="glass-panel p-5 rounded-3xl border border-slate-700/60 space-y-4">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-700/50 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-sky-400"></i>
+                        <h2 class="font-bold text-white text-base">แผงทดลองการเกิดลมบริเวณชายฝั่ง (Land/Sea Breeze Simulation)</h2>
+                    </div>
+                    <!-- Time Toggle Button -->
+                    <div class="flex items-center bg-slate-900/80 p-1 rounded-xl border border-slate-700/80">
+                        <button onclick="setTimeMode('day')" id="btn-time-day" class="px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow">
+                            <i class="fa-solid fa-sun text-yellow-200"></i> กลางวัน (Day)
+                        </button>
+                        <button onclick="setTimeMode('night')" id="btn-time-night" class="px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+                            <i class="fa-solid fa-moon text-indigo-300"></i> กลางคืน (Night)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                    <!-- Land Temp Slider -->
+                    <div class="space-y-2 glass-card p-3.5 rounded-2xl">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-amber-400 font-semibold"><i class="fa-solid fa-mountain mr-1"></i>อุณหภูมิพื้นดิน (Land Temp):</span>
+                            <span id="val-land-temp" class="text-base font-bold text-amber-300">35 °C</span>
+                        </div>
+                        <input type="range" id="slider-land-temp" min="15" max="45" value="35" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>15°C (เย็น)</span>
+                            <span>30°C</span>
+                            <span>45°C (ร้อนจัด)</span>
+                        </div>
+                    </div>
+
+                    <!-- Sea Temp Slider -->
+                    <div class="space-y-2 glass-card p-3.5 rounded-2xl">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-sky-400 font-semibold"><i class="fa-solid fa-water mr-1"></i>อุณหภูมิพื้นน้ำ (Sea Temp):</span>
+                            <span id="val-sea-temp" class="text-base font-bold text-sky-300">25 °C</span>
+                        </div>
+                        <input type="range" id="slider-sea-temp" min="15" max="45" value="25" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>15°C (เย็น)</span>
+                            <span>28°C</span>
+                            <span>45°C (อุ่น)</span>
+                        </div>
+                    </div>
+
+                    <!-- Real-time Temperature Chart -->
+                    <div class="h-28 glass-card p-2 rounded-2xl flex items-center">
+                        <canvas id="chart-temp-compare"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODULE 2 CONTROLS: Monsoon Simulation -->
+            <div id="mod2-controls" class="glass-panel p-5 rounded-3xl border border-slate-700/60 space-y-4 hidden">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-700/50 pb-3">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-earth-asia text-emerald-400"></i>
+                        <h2 class="font-bold text-white text-base">แผงทดลองลมมรสุมระดับภูมิภาค (Monsoon Seasons Simulation)</h2>
+                    </div>
+                    <span class="text-xs text-slate-400"><i class="fa-solid fa-cloud-rain text-sky-400 mr-1"></i>ส่งผลต่อการเกิดฤดูกาลในประเทศไทย</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                    <!-- Season Selector Buttons -->
+                    <div class="space-y-2 md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button onclick="setMonsoonSeason('sw')" id="btn-monsoon-sw" class="p-3.5 rounded-2xl border-2 border-sky-500 bg-sky-500/20 text-white font-semibold text-left transition flex items-center justify-between glow-sky">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2.5 bg-sky-500/30 rounded-xl text-sky-300">
+                                    <i class="fa-solid fa-cloud-showers-heavy text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold text-sky-200">มรสุมตะวันตกเฉียงใต้</div>
+                                    <div class="text-xs text-slate-300 font-normal">พัดจากมหาสมุทร ➔ นำพาฝน (พ.ค. - ก.ย.)</div>
+                                </div>
+                            </div>
+                            <i class="fa-solid fa-circle-check text-sky-400 text-lg"></i>
+                        </button>
+
+                        <button onclick="setMonsoonSeason('ne')" id="btn-monsoon-ne" class="p-3.5 rounded-2xl border border-slate-700 bg-slate-900/60 text-slate-300 hover:text-white font-semibold text-left transition flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="p-2.5 bg-cyan-500/20 rounded-xl text-cyan-300">
+                                    <i class="fa-solid fa-snowflake text-lg"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold text-cyan-200">มรสุมตะวันออกเฉียงเหนือ</div>
+                                    <div class="text-xs text-slate-300 font-normal">พัดจากทวีปจีน ➔ ความหนาวเย็น (พ.ย. - ก.พ.)</div>
+                                </div>
+                            </div>
+                            <i class="fa-regular fa-circle text-slate-600 text-lg"></i>
+                        </button>
+                    </div>
+
+                    <!-- Pressure Gradient / Wind Strength Slider -->
+                    <div class="space-y-2 glass-card p-3.5 rounded-2xl">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-emerald-400 font-semibold"><i class="fa-solid fa-gauge-high mr-1"></i>ความเข้มข้นมวลอากาศ (Wind Power):</span>
+                            <span id="val-monsoon-speed" class="text-base font-bold text-emerald-300">ปานกลาง (Level 2)</span>
+                        </div>
+                        <input type="range" id="slider-monsoon-speed" min="1" max="4" value="2" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>อ่อน</span>
+                            <span>ปานกลาง</span>
+                            <span>แรง</span>
+                            <span>พายุ</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Interactive Quiz Assessment Overlay Modal -->
+    <div id="modal-quiz" class="fixed inset-0 z-50 glass-panel bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl max-w-2xl w-full p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            
+            <!-- Modal Header -->
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 rounded-xl">
+                        <i class="fa-solid fa-award text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-white">แบบทดสอบวัดความเข้าใจ ( Grade 6 Quiz )</h3>
+                        <p class="text-xs text-slate-400">ทดสอบความรู้เรื่อง ลมบกลมทะเล และลมมรสุม</p>
+                    </div>
+                </div>
+                <button onclick="closeQuiz()" class="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Quiz Questions Container -->
+            <div class="space-y-6 text-sm">
+                
+                <!-- Q1 -->
+                <div class="glass-card p-4 rounded-2xl border border-slate-800 space-y-3" id="quiz-q1-box">
+                    <div class="font-bold text-sky-300 flex items-start gap-2">
+                        <span class="bg-sky-500/20 border border-sky-500/40 text-sky-400 px-2 py-0.5 rounded-md text-xs">ข้อ 1</span>
+                        <span>เหตุใดในเวลากลางวันจึงเกิด "ลมทะเล" พัดเข้าสู่ชายฝั่ง?</span>
+                    </div>
+                    <div class="space-y-2 pl-2">
+                        <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 cursor-pointer transition text-slate-300">
+                            <input type="radio" name="q1" value="A" class="accent-sky-500">
+                            <span>ก. พื้นน้ำรับความร้อนได้ดีกว่า ทำให้อากาศเหนือทะเลลอยตัวสูงขึ้น</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 cursor-pointer transition text-slate-300">
+                            <input type="radio" name="q1" value="B" class="accent-sky-500">
+                            <span>ข. พื้นดินร้อนเร็วกว่า อากาศเหนือพื้นดินลอยตัวสูงขึ้น อากาศเย็นกว่าจากทะเลจึงพัดมาแทนที่</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 cursor-pointer transition text-slate-300">
+                            <input type="radio" name="q1" value="C" class="accent-sky-500">
+                            <span>ค. อุณหภูมิของพื้นดินและพื้นน้ำเท่ากันตลอดเวลา</span>
+                        </label>
+                    </div>
+                    <div id="fb-q1" class="hidden p-3 rounded-xl text-xs"></div>
+                </div>
+
+                <!-- Q2 -->
+                <div class="glass-card p-4 rounded-2xl border border-slate-800 space-y-3" id="quiz-q2-box">
+                    <div class="font-bold text-sky-300 flex items-start gap-2">
+                        <span class="bg-sky-500/20 border border-sky-500/40 text-sky-400 px-2 py-0.5 rounded-md text-xs">ข้อ 2</span>
+                        <span>ลมมรสุมตะวันตกเฉียงใต้มีความสำคัญต่อประเทศไทยอย่างไร?</span>
+                    </div>
+                    <div class="space-y-2 pl-2">
+                        <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 cursor-pointer transition text-slate-300">
+                            <input type="radio" name="q2" value="A" class="accent-sky-500">
+                            <span>ก. พัดพาความชื้นจากมหาสมุทรอินเดียเข้ามา ทำให้เกิด "ฤดูฝน" ชุกทั่วประเทศ</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 cursor-pointer transition text-slate-300">
+                            <input type="radio" name="q2" value="B" class="accent-sky-500">
+                            <span>ข. พัดพาความหนาวเย็นและแห้งแล้งมาจากประเทศจีน</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 cursor-pointer transition text-slate-300">
+                            <input type="radio" name="q2" value="C" class="accent-sky-500">
+                            <span>ค. ทำให้เกิดลมบกระดับท้องถิ่นเฉพาะเวลากลางคืน</span>
+                        </label>
+                    </div>
+                    <div id="fb-q2" class="hidden p-3 rounded-xl text-xs"></div>
+                </div>
+
+                <!-- Q3 -->
+                <div class="glass-card p-4 rounded-2xl border border-slate-800 space-y-3" id="quiz-q3-box">
+                    <div class="font-bold text-sky-300 flex items-start gap-2">
+                        <span class="bg-sky-500/20 border border-sky-500/40 text-sky-400 px-2 py-0.5 rounded-md text-xs">ข้อ 3</span>
+                        <span>ข้อใดกล่าวถึงความแตกต่างระหว่าง "ลมประจำเวลา (ลมบกลมทะเล)" กับ "ลมมรสุม" ได้ถูกต้อง?</span>
+                    </div>
+                    <div class="space-y-2 pl-2">
+                        <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 cursor-pointer transition text-slate-300">
+                            <input type="radio" name="q3" value="A" class="accent-sky-500">
+                            <span>ก. ลมบกลมทะเลเปลี่ยนทิศทางตามฤดูกาล ส่วนลมมรสุมเปลี่ยนทิศทางในรอบวัน</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 cursor-pointer transition text-slate-300">
+                            <input type="radio" name="q3" value="B" class="accent-sky-500">
+                            <span>ข. ลมบกลมทะเลเป็นลมท้องถิ่นหมุนเวียนในรอบวัน ส่วนลมมรสุมครอบคลุมระดับภูมิภาคและเกิดตามฤดูกาล</span>
+                        </label>
+                        <label class="flex items-center gap-3 p-2.5 rounded-xl border border-slate-800 hover:bg-slate-800/60 cursor-pointer transition text-slate-300">
+                            <input type="radio" name="q3" value="C" class="accent-sky-500">
+                            <span>ค. ลมมรสุมเกิดขึ้นเฉพาะในเวลากลางคืนเท่านั้น</span>
+                        </label>
+                    </div>
+                    <div id="fb-q3" class="hidden p-3 rounded-xl text-xs"></div>
+                </div>
+
+            </div>
+
+            <!-- Quiz Result Score & Actions -->
+            <div id="quiz-score-card" class="hidden p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl text-center space-y-2">
+                <div class="text-2xl font-bold text-emerald-400" id="score-text">คะแนนของคุณ: 3 / 3</div>
+                <p class="text-xs text-slate-300" id="score-msg">ยินดีด้วย! คุณเข้าใจหลักการเกิดลมและการเปลี่ยนทิศทางอย่างแม่นยำ</p>
+            </div>
+
+            <div class="flex justify-between items-center border-t border-slate-800 pt-4">
+                <button onclick="closeQuiz()" class="px-5 py-2.5 rounded-xl text-slate-400 hover:text-white transition">
+                    ปิด
+                </button>
+                <button onclick="evaluateQuiz()" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold shadow-lg hover:from-emerald-400 hover:to-teal-500 transition">
+                    <i class="fa-solid fa-paper-plane mr-2"></i>ส่งคำตอบ
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JavaScript & Three.js 3D Engine Setup -->
+    <script>
+        // Global Application State Variables
+        let currentModule = 1; // 1: Land/Sea Breeze, 2: Monsoon
+        let timeMode = 'day';   // 'day' or 'night'
+        let landTemp = 35;
+        let seaTemp = 25;
+        let monsoonSeason = 'sw'; // 'sw' or 'ne'
+        let monsoonStrength = 2;
+
+        // Three.js Core Objects
+        let scene, camera, renderer, controls;
+        let mod1Group, mod2Group;
+        
+        // 3D Visual Objects references
+        let sunMoonLight, sunMoonMesh;
+        let oceanMesh, landMesh;
+        let windParticlesMod1 = [];
+        let windParticlesMod2 = [];
+        let mapThailandMesh;
+
+        // Temperature Bar Chart Reference
+        let tempChart;
+
+        // --- 1. Three.js Initialization & Scene Setup ---
+        function init3D() {
+            const container = document.getElementById('canvas-container');
+            
+            // Create Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0b1329);
+            scene.fog = new THREE.FogExp2(0x0b1329, 0.012);
+
+            // Perspective Camera Setup
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 18, 38);
+
+            // Renderer Configuration
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Orbit Controls Setup
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.02; // Prevents camera going below ground
+            controls.minDistance = 10;
+            controls.maxDistance = 80;
+
+            // Lighting Setup
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            sunMoonLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            sunMoonLight.position.set(-15, 25, 10);
+            sunMoonLight.castShadow = true;
+            sunMoonLight.shadow.mapSize.width = 1024;
+            sunMoonLight.shadow.mapSize.height = 1024;
+            scene.add(sunMoonLight);
+
+            // Create Module Groups
+            mod1Group = new THREE.Group();
+            mod2Group = new THREE.Group();
+            scene.add(mod1Group);
+            scene.add(mod2Group);
+
+            // Build 3D Models
+            buildModule1Scene();
+            buildModule2Scene();
+
+            // Initial visibility state
+            mod2Group.visible = false;
+
+            // Handle Resize
+            window.addEventListener('resize', onWindowResize);
+
+            // Start Chart
+            initChart();
+
+            // Start Animation Loop
+            animate();
+        }
+
+        // --- 2. Build Module 1 Scene (Land & Sea Terrain) ---
+        function buildModule1Scene() {
+            // Ground Plane: Land (Left) & Ocean (Right)
+            
+            // Land Terrain Geometry
+            const landGeo = new THREE.PlaneGeometry(24, 24, 32, 32);
+            // Add subtle hill elevations
+            const pos = landGeo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+                const x = pos.getX(i);
+                const y = pos.getY(i);
+                if (x < 0) {
+                    pos.setZ(i, Math.sin(x * 0.4) * Math.cos(y * 0.4) * 1.5);
+                }
+            }
+            landGeo.computeVertexNormals();
+
+            const landMat = new THREE.MeshStandardMaterial({
+                color: 0x22c55e,
+                roughness: 0.8,
+                metalness: 0.1
+            });
+            landMesh = new THREE.Mesh(landGeo, landMat);
+            landMesh.rotation.x = -Math.PI / 2;
+            landMesh.position.set(-12, 0, 0);
+            landMesh.receiveShadow = true;
+            mod1Group.add(landMesh);
+
+            // Ocean Water Surface
+            const seaGeo = new THREE.PlaneGeometry(24, 24, 16, 16);
+            const seaMat = new THREE.MeshStandardMaterial({
+                color: 0x0284c7,
+                roughness: 0.1,
+                metalness: 0.8,
+                transparent: true,
+                opacity: 0.85
+            });
+            oceanMesh = new THREE.Mesh(seaGeo, seaMat);
+            oceanMesh.rotation.x = -Math.PI / 2;
+            oceanMesh.position.set(12, 0, 0);
+            oceanMesh.receiveShadow = true;
+            mod1Group.add(oceanMesh);
+
+            // Sun/Moon Orb Mesh
+            const orbGeo = new THREE.SphereGeometry(1.5, 32, 32);
+            const orbMat = new THREE.MeshBasicMaterial({ color: 0xfcb839 });
+            sunMoonMesh = new THREE.Mesh(orbGeo, orbMat);
+            sunMoonMesh.position.copy(sunMoonLight.position);
+            mod1Group.add(sunMoonMesh);
+
+            // Low-Poly Trees on Land
+            for (let i = 0; i < 15; i++) {
+                const trunk = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.15, 0.25, 1),
+                    new THREE.MeshStandardMaterial({ color: 0x78350f })
+                );
+                const foliage = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.8, 2, 6),
+                    new THREE.MeshStandardMaterial({ color: 0x15803d })
+                );
+                foliage.position.y = 1.2;
+                const tree = new THREE.Group();
+                tree.add(trunk, foliage);
+                
+                const tx = -18 + Math.random() * 10;
+                const tz = -9 + Math.random() * 18;
+                tree.position.set(tx, 0.5, tz);
+                mod1Group.add(tree);
+            }
+
+            // Wind Particle Vectors for Air Circulation
+            const particleCount = 80;
+            const pGeo = new THREE.BufferGeometry();
+            const pPositions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount; i++) {
+                pPositions[i * 3] = (Math.random() - 0.5) * 40;
+                pPositions[i * 3 + 1] = Math.random() * 12 + 1;
+                pPositions[i * 3 + 2] = (Math.random() - 0.5) * 16;
+                windParticlesMod1.push({
+                    progress: Math.random(),
+                    speed: 0.005 + Math.random() * 0.005
+                });
+            }
+
+            pGeo.setAttribute('position', new THREE.BufferAttribute(pPositions, 3));
+            const pMat = new THREE.PointsMaterial({
+                color: 0x38bdf8,
+                size: 0.45,
+                transparent: true,
+                opacity: 0.8
+            });
+            
+            const pSystem = new THREE.Points(pGeo, pMat);
+            pSystem.name = "windSystemMod1";
+            mod1Group.add(pSystem);
+        }
+
+        // --- 3. Build Module 2 Scene (Thailand & Regional Map) ---
+        function buildModule2Scene() {
+            // Regional Base Plate (Ocean)
+            const mapBaseGeo = new THREE.BoxGeometry(40, 1, 30);
+            const mapBaseMat = new THREE.MeshStandardMaterial({
+                color: 0x0f172a,
+                roughness: 0.3
+            });
+            const mapBase = new THREE.Mesh(mapBaseGeo, mapBaseMat);
+            mapBase.position.y = -0.5;
+            mod2Group.add(mapBase);
+
+            // Asian Continent / Ocean floor representation
+            const oceanGeo = new THREE.PlaneGeometry(38, 28);
+            const oceanMat = new THREE.MeshStandardMaterial({
+                color: 0x0369a1,
+                roughness: 0.2
+            });
+            const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+            ocean.rotation.x = -Math.PI / 2;
+            ocean.position.y = 0.01;
+            mod2Group.add(ocean);
+
+            // Thailand Landmass Relief Shape (Stylized 3D Model)
+            const landShape = new THREE.Shape();
+            landShape.moveTo(-2, -5);
+            landShape.lineTo(-1, 2);
+            landShape.lineTo(3, 4);
+            landShape.lineTo(4, 1);
+            landShape.lineTo(1, -2);
+            landShape.lineTo(-1, -7);
+            landShape.lineTo(-2, -5);
+
+            const extrudeSettings = { depth: 0.8, bevelEnabled: true, bevelSegments: 2, steps: 1, bevelSize: 0.1, bevelThickness: 0.1 };
+            const thaiGeo = new THREE.ExtrudeGeometry(landShape, extrudeSettings);
+            const thaiMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.6 });
+            mapThailandMesh = new THREE.Mesh(thaiGeo, thaiMat);
+            mapThailandMesh.rotation.x = -Math.PI / 2;
+            mapThailandMesh.position.set(0, 0.1, 0);
+            mod2Group.add(mapThailandMesh);
+
+            // Surrounding Landmass (China / India outlines)
+            const chinaGeo = new THREE.BoxGeometry(16, 0.6, 8);
+            const chinaMat = new THREE.MeshStandardMaterial({ color: 0x334155 });
+            const chinaMesh = new THREE.Mesh(chinaGeo, chinaMat);
+            chinaMesh.position.set(8, 0.3, -9);
+            mod2Group.add(chinaMesh);
+
+            // Monsoon Wind System Particles
+            const particleCount2 = 120;
+            const pGeo2 = new THREE.BufferGeometry();
+            const pPos2 = new Float32Array(particleCount2 * 3);
+
+            for (let i = 0; i < particleCount2; i++) {
+                pPos2[i * 3] = (Math.random() - 0.5) * 35;
+                pPos2[i * 3 + 1] = Math.random() * 5 + 1;
+                pPos2[i * 3 + 2] = (Math.random() - 0.5) * 25;
+
+                windParticlesMod2.push({
+                    x: pPos2[i * 3],
+                    y: pPos2[i * 3 + 1],
+                    z: pPos2[i * 3 + 2],
+                    speed: 0.1 + Math.random() * 0.15
+                });
+            }
+
+            pGeo2.setAttribute('position', new THREE.BufferAttribute(pPos2, 3));
+            const pMat2 = new THREE.PointsMaterial({
+                color: 0x38bdf8,
+                size: 0.5,
+                transparent: true,
+                opacity: 0.85
+            });
+            const pSystem2 = new THREE.Points(pGeo2, pMat2);
+            pSystem2.name = "windSystemMod2";
+            mod2Group.add(pSystem2);
+        }
+
+        // --- 4. Real-Time Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            controls.update();
+
+            // Module 1 Animations (Land/Sea Circulation Vector)
+            if (currentModule === 1) {
+                const windSys = mod1Group.getObjectByName("windSystemMod1");
+                if (windSys) {
+                    const pos = windSys.geometry.attributes.position;
+                    const isSeaBreeze = landTemp > seaTemp;
+                    const tempDiff = Math.abs(landTemp - seaTemp);
+                    const speedMultiplier = 0.002 + (tempDiff * 0.0008);
+
+                    for (let i = 0; i < windParticlesMod1.length; i++) {
+                        let p = windParticlesMod1[i];
+                        p.progress += speedMultiplier;
+                        if (p.progress > 1) p.progress = 0;
+
+                        // Circular Stream Flow
+                        const angle = p.progress * Math.PI * 2;
+                        const radiusX = 14;
+                        const radiusY = 5;
+
+                        if (isSeaBreeze) {
+                            // Sea Breeze: Move Left towards Land at low altitude, Rise at Land, Return Right high up
+                            pos.setX(i, Math.cos(angle) * radiusX);
+                            pos.setY(i, 6 + Math.sin(angle) * radiusY);
+                        } else {
+                            // Land Breeze: Reverse Direction
+                            pos.setX(i, -Math.cos(angle) * radiusX);
+                            pos.setY(i, 6 + Math.sin(angle) * radiusY);
+                        }
+                    }
+                    pos.needsUpdate = true;
+                }
+            }
+
+            // Module 2 Animations (Regional Monsoon Streamlines)
+            if (currentModule === 2) {
+                const windSys2 = mod2Group.getObjectByName("windSystemMod2");
+                if (windSys2) {
+                    const pos = windSys2.geometry.attributes.position;
+                    const speed = 0.08 * monsoonStrength;
+
+                    for (let i = 0; i < windParticlesMod2.length; i++) {
+                        let p = windParticlesMod2[i];
+
+                        if (monsoonSeason === 'sw') {
+                            // SW Monsoon: Blows SW to NE (Ocean to Land)
+                            p.x += speed * 1.2;
+                            p.z -= speed * 1.0;
+                            if (p.x > 18 || p.z < -12) {
+                                p.x = -18 + (Math.random() - 0.5) * 8;
+                                p.z = 12 + (Math.random() - 0.5) * 8;
+                            }
+                        } else {
+                            // NE Monsoon: Blows NE to SW (China continent to Ocean)
+                            p.x -= speed * 1.2;
+                            p.z += speed * 1.0;
+                            if (p.x < -18 || p.z > 12) {
+                                p.x = 18 + (Math.random() - 0.5) * 8;
+                                p.z = -12 + (Math.random() - 0.5) * 8;
+                            }
+                        }
+
+                        pos.setX(i, p.x);
+                        pos.setY(i, p.y);
+                        pos.setZ(i, p.z);
+                    }
+                    pos.needsUpdate = true;
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // --- 5. User Interaction & Control Logic ---
+        function setModule(modId) {
+            currentModule = modId;
+            
+            // UI Button states
+            document.getElementById('btn-mod-1').className = modId === 1 ?
+                "px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md glow-sky" :
+                "px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-white";
+
+            document.getElementById('btn-mod-2').className = modId === 2 ?
+                "px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md" :
+                "px-5 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 text-slate-400 hover:text-white";
+
+            // Control Drawer visibility
+            document.getElementById('mod1-controls').classList.toggle('hidden', modId !== 1);
+            document.getElementById('mod2-controls').classList.toggle('hidden', modId !== 2);
+
+            // Scene visibility
+            mod1Group.visible = (modId === 1);
+            mod2Group.visible = (modId === 2);
+
+            // HUD updates
+            if (modId === 1) {
+                camera.position.set(0, 18, 38);
+                updateMod1HUD();
+            } else {
+                camera.position.set(0, 30, 25);
+                updateMod2HUD();
+            }
+            controls.target.set(0, 0, 0);
+        }
+
+        // --- Module 1 Logic Sliders ---
+        function setTimeMode(mode) {
+            timeMode = mode;
+            const btnDay = document.getElementById('btn-time-day');
+            const btnNight = document.getElementById('btn-time-night');
+            const sliderLand = document.getElementById('slider-land-temp');
+            const sliderSea = document.getElementById('slider-sea-temp');
+
+            if (mode === 'day') {
+                btnDay.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow";
+                btnNight.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white";
+                
+                // Set default Day temperatures
+                sliderLand.value = 35;
+                sliderSea.value = 25;
+                sunMoonLight.position.set(-15, 25, 10);
+                sunMoonLight.color.setHex(0xffffff);
+                sunMoonMesh.material.color.setHex(0xfcb839);
+                scene.background.setHex(0x0b1329);
+            } else {
+                btnNight.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 bg-gradient-to-r from-indigo-600 to-blue-700 text-white shadow";
+                btnDay.className = "px-4 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white";
+
+                // Set default Night temperatures
+                sliderLand.value = 20;
+                sliderSea.value = 26;
+                sunMoonLight.position.set(15, 25, -10);
+                sunMoonLight.color.setHex(0x818cf8);
+                sunMoonMesh.material.color.setHex(0xe0e7ff);
+                scene.background.setHex(0x050b18);
+            }
+            sunMoonMesh.position.copy(sunMoonLight.position);
+
+            updateMod1Calculations();
+        }
+
+        document.getElementById('slider-land-temp').addEventListener('input', (e) => {
+            landTemp = parseInt(e.target.value);
+            document.getElementById('val-land-temp').textContent = `${landTemp} °C`;
+            updateMod1Calculations();
+        });
+
+        document.getElementById('slider-sea-temp').addEventListener('input', (e) => {
+            seaTemp = parseInt(e.target.value);
+            document.getElementById('val-sea-temp').textContent = `${seaTemp} °C`;
+            updateMod1Calculations();
+        });
+
+        function updateMod1Calculations() {
+            landTemp = parseInt(document.getElementById('slider-land-temp').value);
+            seaTemp = parseInt(document.getElementById('slider-sea-temp').value);
+            document.getElementById('val-land-temp').textContent = `${landTemp} °C`;
+            document.getElementById('val-sea-temp').textContent = `${seaTemp} °C`;
+
+            // Update Temperature Bar Chart
+            if (tempChart) {
+                tempChart.data.datasets[0].data = [landTemp, seaTemp];
+                tempChart.update();
+            }
+
+            updateMod1HUD();
+        }
+
+        function updateMod1HUD() {
+            const badge = document.getElementById('hud-status-badge');
+            const title = document.getElementById('hud-title');
+            const desc = document.getElementById('hud-desc');
+            const dp = document.getElementById('hud-dp');
+            const speed = document.getElementById('hud-wind-speed');
+
+            const tempDiff = landTemp - seaTemp;
+            const absDiff = Math.abs(tempDiff);
+
+            dp.textContent = `${(absDiff * 0.4).toFixed(1)} hPa`;
+            speed.textContent = `${(absDiff * 2.5).toFixed(1)} km/h`;
+
+            if (tempDiff > 0) {
+                badge.textContent = "เกิดลมทะเล (Sea Breeze)";
+                badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                title.innerHTML = `<i class="fa-solid fa-water text-sky-400"></i> ลมทะเล (Sea Breeze)`;
+                desc.textContent = `พื้นดิน (${landTemp}°C) ร้อนกว่าพื้นน้ำ (${seaTemp}°C) อากาศเหนือพื้นดินลอยตัวสูงขึ้น อากาศเย็นกว่าจากทะเลที่มีความกดอากาศสูงจึงพัดเข้ามาแทนที่`;
+            } else if (tempDiff < 0) {
+                badge.textContent = "เกิดลมบก (Land Breeze)";
+                badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30";
+                title.innerHTML = `<i class="fa-solid fa-mountain text-emerald-400"></i> ลมบก (Land Breeze)`;
+                desc.textContent = `พื้นน้ำ (${seaTemp}°C) อุ่นกว่าพื้นดิน (${landTemp}°C) อากาศเหนือทะเลลอยตัวสูงขึ้น อากาศเย็นจากพื้นดินที่มีความกดอากาศสูงกว่าจึงพัดออกสู่ทะเล`;
+            } else {
+                badge.textContent = "ไม่มีลมพัด (Equilibrium)";
+                badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-500/20 text-slate-300 border border-slate-500/30";
+                title.innerHTML = `<i class="fa-solid fa-equals text-slate-400"></i> อากาศนิ่งสงบ`;
+                desc.textContent = `อุณหภูมิพื้นดินและพื้นน้ำเท่ากัน (${landTemp}°C) ความกดอากาศเท่ากัน ไม่เกิดการถ่ายเทของกระแสลม`;
+            }
+        }
+
+        // --- Module 2 Logic (Monsoon) ---
+        function setMonsoonSeason(season) {
+            monsoonSeason = season;
+            const btnSW = document.getElementById('btn-monsoon-sw');
+            const btnNE = document.getElementById('btn-monsoon-ne');
+
+            if (season === 'sw') {
+                btnSW.className = "p-3.5 rounded-2xl border-2 border-sky-500 bg-sky-500/20 text-white font-semibold text-left transition flex items-center justify-between glow-sky";
+                btnNE.className = "p-3.5 rounded-2xl border border-slate-700 bg-slate-900/60 text-slate-300 hover:text-white font-semibold text-left transition flex items-center justify-between";
+                btnSW.querySelector('.fa-solid, .fa-regular').className = "fa-solid fa-circle-check text-sky-400 text-lg";
+                btnNE.querySelector('.fa-solid, .fa-regular').className = "fa-regular fa-circle text-slate-600 text-lg";
+            } else {
+                btnNE.className = "p-3.5 rounded-2xl border-2 border-cyan-500 bg-cyan-500/20 text-white font-semibold text-left transition flex items-center justify-between glow-amber";
+                btnSW.className = "p-3.5 rounded-2xl border border-slate-700 bg-slate-900/60 text-slate-300 hover:text-white font-semibold text-left transition flex items-center justify-between";
+                btnNE.querySelector('.fa-solid, .fa-regular').className = "fa-solid fa-circle-check text-cyan-400 text-lg";
+                btnSW.querySelector('.fa-solid, .fa-regular').className = "fa-regular fa-circle text-slate-600 text-lg";
+            }
+
+            updateMod2HUD();
+        }
+
+        document.getElementById('slider-monsoon-speed').addEventListener('input', (e) => {
+            monsoonStrength = parseInt(e.target.value);
+            const labels = ["อ่อน (Level 1)", "ปานกลาง (Level 2)", "แรง (Level 3)", "พายุมรสุม (Level 4)"];
+            document.getElementById('val-monsoon-speed').textContent = labels[monsoonStrength - 1];
+            updateMod2HUD();
+        });
+
+        function updateMod2HUD() {
+            const badge = document.getElementById('hud-status-badge');
+            const title = document.getElementById('hud-title');
+            const desc = document.getElementById('hud-desc');
+            const dp = document.getElementById('hud-dp');
+            const speed = document.getElementById('hud-wind-speed');
+
+            dp.textContent = `${(monsoonStrength * 4.5).toFixed(1)} hPa`;
+            speed.textContent = `${(monsoonStrength * 18).toFixed(0)} knots`;
+
+            if (monsoonSeason === 'sw') {
+                badge.textContent = "มรสุมตะวันตกเฉียงใต้ (ฤดูฝน)";
+                badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30";
+                title.innerHTML = `<i class="fa-solid fa-cloud-showers-heavy text-sky-400"></i> ลมมรสุมตะวันตกเฉียงใต้`;
+                desc.textContent = `(พ.ค. - ก.ย.) ความกดอากาศสูงเหนือมหาสมุทรอินเดีย พัดเอาไอน้ำและความชื้นมหาศาลเข้าสู่ประเทศไทย เกิดเป็น "ฤดูฝน" ชุกทั่วทุกภูมิภาค`;
+            } else {
+                badge.textContent = "มรสุมตะวันออกเฉียงเหนือ (ฤดูหนาว)";
+                badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30";
+                title.innerHTML = `<i class="fa-solid fa-snowflake text-cyan-400"></i> ลมมรสุมตะวันออกเฉียงเหนือ`;
+                desc.textContent = `(พ.ย. - ก.พ.) ความกดอากาศสูงจากทวีปจีน พัดเอามวลอากาศเย็นและแห้งแล้งครอบคลุมประเทศไทย เกิดเป็น "ฤดูหนาว"`;
+            }
+        }
+
+        // --- Camera Helper Functions ---
+        function resetCamera() {
+            if (currentModule === 1) {
+                camera.position.set(0, 18, 38);
+            } else {
+                camera.position.set(0, 30, 25);
+            }
+            controls.target.set(0, 0, 0);
+        }
+
+        function toggleAutoRotate() {
+            controls.autoRotate = !controls.autoRotate;
+            const btn = document.getElementById('btn-auto-rotate');
+            btn.classList.toggle('text-sky-400', controls.autoRotate);
+            btn.classList.toggle('text-slate-400', !controls.autoRotate);
+        }
+
+        // Window Resize Handler
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- Chart.js Setup ---
+        function initChart() {
+            const ctx = document.getElementById('chart-temp-compare').getContext('2d');
+            tempChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['พื้นดิน (Land)', 'พื้นน้ำ (Sea)'],
+                    datasets: [{
+                        label: 'อุณหภูมิ (°C)',
+                        data: [landTemp, seaTemp],
+                        backgroundColor: ['rgba(245, 158, 11, 0.8)', 'rgba(14, 165, 233, 0.8)'],
+                        borderColor: ['#f59e0b', '#0ea5e9'],
+                        borderWidth: 1.5,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 50,
+                            ticks: { color: '#94a3b8', font: { size: 9 } },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        x: {
+                            ticks: { color: '#cbd5e1', font: { size: 10, weight: 'bold' } },
+                            grid: { display: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // --- Quiz System Logic ---
+        function openQuiz() {
+            document.getElementById('modal-quiz').classList.remove('hidden');
+        }
+
+        function closeQuiz() {
+            document.getElementById('modal-quiz').classList.add('hidden');
+        }
+
+        function evaluateQuiz() {
+            let score = 0;
+            const answers = { q1: 'B', q2: 'A', q3: 'B' };
+
+            // Check Question 1
+            const q1Selected = document.querySelector('input[name="q1"]:checked')?.value;
+            const fb1 = document.getElementById('fb-q1');
+            fb1.classList.remove('hidden');
+            if (q1Selected === answers.q1) {
+                score++;
+                fb1.className = "p-3 rounded-xl text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+                fb1.innerHTML = "✅ <b>ถูกต้อง:</b> เวลากลางวันพื้นดินร้อนเร็วกว่า อากาศเหนือพื้นดินลอยตัวสูงขึ้น อากาศเย็นจากทะเลจึงพัดเข้ามาแทนที่";
+            } else {
+                fb1.className = "p-3 rounded-xl text-xs bg-rose-500/20 text-rose-300 border border-rose-500/40";
+                fb1.innerHTML = "❌ <b>ยังไม่ถูกต้อง:</b> เฉลย ข. (พื้นดินรับความร้อนได้ดีกว่าในเวลากลางวัน)";
+            }
+
+            // Check Question 2
+            const q2Selected = document.querySelector('input[name="q2"]:checked')?.value;
+            const fb2 = document.getElementById('fb-q2');
+            fb2.classList.remove('hidden');
+            if (q2Selected === answers.q2) {
+                score++;
+                fb2.className = "p-3 rounded-xl text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+                fb2.innerHTML = "✅ <b>ถูกต้อง:</b> ลมมรสุมตะวันตกเฉียงใต้พัดพาความชื้นจากมหาสมุทรอินเดีย นำฝนมาสู่ประเทศไทย";
+            } else {
+                fb2.className = "p-3 rounded-xl text-xs bg-rose-500/20 text-rose-300 border border-rose-500/40";
+                fb2.innerHTML = "❌ <b>ยังไม่ถูกต้อง:</b> เฉลย ก. (พัดพาความชื้นก่อให้เกิดฤดูฝน)";
+            }
+
+            // Check Question 3
+            const q3Selected = document.querySelector('input[name="q3"]:checked')?.value;
+            const fb3 = document.getElementById('fb-q3');
+            fb3.classList.remove('hidden');
+            if (q3Selected === answers.q3) {
+                score++;
+                fb3.className = "p-3 rounded-xl text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/40";
+                fb3.innerHTML = "✅ <b>ถูกต้อง:</b> ลมบกลมทะเลหมุนเวียนในรอบวันระดับชายฝั่ง ส่วนลมมรสุมครอบคลุมระดับภูมิภาคและเกิดตามฤดูกาล";
+            } else {
+                fb3.className = "p-3 rounded-xl text-xs bg-rose-500/20 text-rose-300 border border-rose-500/40";
+                fb3.innerHTML = "❌ <b>ยังไม่ถูกต้อง:</b> เฉลย ข. (แตกต่างกันที่ขนาดพื้นที่และช่วงเวลาการเกิด)";
+            }
+
+            // Display Score Card
+            const scoreCard = document.getElementById('quiz-score-card');
+            const scoreText = document.getElementById('score-text');
+            const scoreMsg = document.getElementById('score-msg');
+
+            scoreCard.classList.remove('hidden');
+            scoreText.textContent = `คะแนนของคุณ: ${score} / 3`;
+
+            if (score === 3) {
+                scoreMsg.textContent = "🎉 ยอดเยี่ยมมาก! คุณได้คะแนนเต็มและเข้าใจเนื้อหานี้อย่างสมบูรณ์แบบ";
+            } else {
+                scoreMsg.textContent = "👍 ทบทวนคำอธิบายเฉลยด้านบนเพื่อเสริมความเข้าใจให้แม่นยำยิ่งขึ้นนะ";
+            }
+        }
+
+        // Initialize 3D Application on Page Load
+        window.onload = function() {
+            init3D();
+        };
+    </script>
+</body>
+</html>
